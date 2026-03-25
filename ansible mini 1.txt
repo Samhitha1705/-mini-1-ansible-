@@ -1,0 +1,157 @@
+ou created a mini DevOps environment on your PC:
+
+WSL (Control Node)
+        ↓
+Ansible
+        ↓
+Docker Containers (node1, node2)
+        ↓
+Nginx running (web servers)
+
+👉 Tools used:
+
+Ansible → automation
+Docker → servers
+Nginx → application
+💻 2. COMMANDS YOU LEARNED
+🐳 Docker (Create servers)
+Create containers
+docker run -dit -p 2222:22 -p 9001:80 --name node1 ubuntu
+docker run -dit -p 2223:22 -p 9002:80 --name node2 ubuntu
+
+👉 Learned:
+
+-d → detached mode
+-it → interactive terminal
+-p → port mapping (VERY IMPORTANT)
+Enter container
+docker exec -it node1 bash
+Remove containers
+docker rm -f node1 node2
+🔐 SSH Setup (inside containers)
+apt update
+apt install -y openssh-server python3 sudo nano
+mkdir -p /var/run/sshd
+service ssh start / restart
+passwd
+
+👉 Learned:
+
+SSH is required for Ansible
+/var/run/sshd is required for sshd to run
+⚙️ Ansible Commands
+Check version
+ansible --version
+Inventory file
+[servers]
+node1 ansible_host=127.0.0.1 ansible_port=2222 ansible_user=root ansible_password=1234
+node2 ansible_host=127.0.0.1 ansible_port=2223 ansible_user=root ansible_password=1234
+Test connection
+export ANSIBLE_HOST_KEY_CHECKING=False
+ansible servers -i inventory.ini -m ping
+
+👉 Output:
+
+ping: pong
+Run playbook
+ansible-playbook -i inventory.ini deploy.yml
+📦 Playbook (Automation)
+- name: Install and start nginx
+  hosts: servers
+  become: yes
+
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Start nginx
+      command: service nginx start
+🧠 3. CORE CONCEPTS YOU LEARNED
+🟢 1. Control Node vs Managed Nodes
+Type	Meaning
+Control Node	Your WSL
+Managed Nodes	Docker containers
+
+👉 Ansible runs FROM → control node
+👉 Executes ON → servers
+
+🟢 2. Agentless Architecture
+
+👉 Ansible does NOT need agents
+👉 Uses SSH only
+
+🟢 3. Inventory
+
+👉 Defines:
+
+servers
+IP / ports
+credentials
+🟢 4. Modules
+
+Example:
+
+ansible servers -m ping
+
+👉 ping is a module
+
+🟢 5. Playbooks
+
+👉 YAML files for automation
+
+👉 Used for:
+
+install packages
+start services
+deploy apps
+🟢 6. Port Mapping (VERY IMPORTANT)
+-p 9001:80
+
+👉 Meaning:
+
+9001 → your PC
+80 → container
+
+👉 Without this → browser won’t work ❌
+
+🟢 7. SSH Authentication
+
+👉 Required:
+
+username
+password
+
+👉 Problem you solved:
+
+host key checking
+🟢 8. Docker Limitation
+
+👉 No systemd ❌
+👉 So:
+
+service:
+
+sometimes fails
+
+👉 Fix:
+
+command: service nginx start
+🟢 9. Idempotency
+
+👉 Running playbook again:
+
+doesn’t break anything
+only changes if needed
+🚀 4. WHAT YOU ACHIEVED (REAL DEVOPS SKILL)
+
+You can now:
+
+✅ Create servers
+✅ Configure SSH
+✅ Connect using Ansible
+✅ Automate installation
+✅ Deploy web server
+✅ Access via browser
