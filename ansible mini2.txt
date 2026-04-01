@@ -1,0 +1,98 @@
+🚀 Ansible + Docker Mini Project (Full Summary)
+📌 Project Overview
+
+In this project, I created a multi-server environment locally using Docker containers and automated configuration using Ansible.
+
+🧱 Architecture
+2 Docker containers acting as servers:
+node1
+node2
+Each container:
+Runs Ubuntu
+Has SSH enabled
+Runs Nginx
+Ansible (from WSL) connects via SSH and deploys configuration
+⚙️ Step-by-Step Implementation
+1️⃣ Create Containers
+docker run -dit -p 2222:22 -p 9001:80 --name node1 
+2️⃣ Setup Each Container
+ubuntu
+docker run -dit -p 2223:22 -p 9002:80 --name node2 ubuntu
+docker exec -it node1 bash
+apt update
+apt install -y openssh-server python3 sudo
+mkdir -p /var/run/sshd
+service ssh start
+passwd   # set password = 1234
+exit
+
+👉 Repeat same for node2
+
+3️⃣ Configure SSH
+Enabled root login in /etc/ssh/sshd_config:
+PermitRootLogin yes
+Restarted SSH:
+service ssh restart
+4️⃣ Create Ansible Project
+mkdir arigato
+cd arigato
+5️⃣ Create Inventory File
+[servers]
+node1 ansible_host=127.0.0.1 ansible_port=2222 ansible_user=root ansible_password=1234
+node2 ansible_host=127.0.0.1 ansible_port=2223 ansible_user=root ansible_password=1234
+6️⃣ Test Connectivity
+export ANSIBLE_HOST_KEY_CHECKING=False
+ansible servers -i inventory.ini -m ping
+
+✅ Output:
+
+node1 | SUCCESS
+node2 | SUCCESS
+7️⃣ Create Template
+mkdir -p templates
+vim templates/index.html.j2
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Ansible Project</title>
+</head>
+<body>
+    <h1>Hello from {{ inventory_hostname }}</h1>
+    <p>Deployed using Ansible 🚀</p>
+</body>
+</html>
+8️⃣ Create Playbook
+- name: Install and start nginx
+  hosts: servers
+  become: yes
+
+  tasks:
+    - name: Install nginx
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+
+    - name: Start nginx manually
+      shell: service nginx start
+
+    - name: Deploy custom HTML page
+      template:
+        src: templates/index.html.j2
+        dest: /var/www/html/index.html
+9️⃣ Run Playbook
+ansible-playbook -i inventory.ini deploy.yml
+🔟 Verify Output
+
+Open in browser:
+
+http://localhost:9001
+ → node1
+http://localhost:9002
+ → node2
+
+✅ Output:
+
+Hello from node1
+Hello from node2
