@@ -1,0 +1,211 @@
+📝 Ansible + Docker Website Deployment Notes
+📌 Project Goal
+
+Automate deployment of a custom website on multiple servers using Ansible and simulate servers using Docker.
+
+🧱 Architecture
+Control Node → WSL (Ansible installed)
+Managed Nodes → Docker containers
+node1 (DEV)
+node2 (PROD)
+📁 Project Structure
+ansible-web-deploy/
+├── ansible.cfg
+├── inventory/
+├── group_vars/
+├── host_vars/
+├── roles/
+└── site.yml
+
+👉 This structure follows real-world DevOps standards
+
+⚙️ 1. ansible.cfg
+[defaults]
+inventory = inventory/inventory.ini
+host_key_checking = False
+📖 Explanation
+inventory → tells Ansible where servers are defined
+host_key_checking=False → avoids SSH confirmation prompt
+
+👉 Makes commands shorter and smoother
+
+📡 2. Inventory (Servers)
+[webservers]
+node1 ansible_host=127.0.0.1 ansible_port=2222 ansible_user=root ansible_password=1234
+node2 ansible_host=127.0.0.1 ansible_port=2223 ansible_user=root ansible_password=1234
+📖 Explanation
+Defines servers
+Groups them as webservers
+Provides:
+IP
+SSH port
+username
+password
+
+👉 This is how Ansible knows where to connect
+
+🧠 3. group_vars (Common Variables)
+app_name: Arigato Web
+company: Middleware Talents
+📖 Explanation
+Applies to all servers in webservers
+Used inside templates
+
+👉 Avoids repeating same values
+
+🧠 4. host_vars (Per Server Config)
+node1.yml
+env: DEV
+custom_msg: Hello from DEV server
+node2.yml
+env: PROD
+custom_msg: Hello from PROD server
+📖 Explanation
+Each server gets different values
+Enables environment-based deployment
+
+👉 Same code → different output
+
+📦 5. Role: nginx_site
+
+👉 Role = reusable module in Ansible
+
+📁 defaults/main.yml
+nginx_root: /var/www/html
+📖 Explanation
+Default variable
+Used in tasks
+📁 tasks/main.yml
+- name: Install nginx
+  apt:
+    name: nginx
+    state: present
+    update_cache: yes
+
+- name: Deploy nginx config
+  template:
+    src: nginx.conf.j2
+    dest: /etc/nginx/sites-available/default
+  notify: Restart nginx
+
+- name: Deploy dynamic index page
+  template:
+    src: index.html.j2
+    dest: "{{ nginx_root }}/index.html"
+  notify: Restart nginx
+
+- name: Copy static files
+  copy:
+    src: site/
+    dest: "{{ nginx_root }}/"
+
+- name: Start nginx
+  shell: service nginx start
+📖 Explanation
+Task	Purpose
+Install nginx	install web server
+Deploy config	apply nginx config
+Deploy index	dynamic HTML page
+Copy files	static files (CSS, pages)
+Start nginx	run server
+
+👉 This is the core automation logic
+
+📁 handlers/main.yml
+- name: Restart nginx
+  shell: service nginx restart
+📖 Explanation
+Runs only when notified
+Triggered when config/template changes
+
+👉 Efficient restart mechanism
+
+📁 templates/index.html.j2
+<h1>{{ app_name }}</h1>
+<p>Server: {{ inventory_hostname }}</p>
+<p>Environment: {{ env }}</p>
+<p>{{ custom_msg }}</p>
+<p>Company: {{ company }}</p>
+📖 Explanation
+Uses Jinja variables
+Dynamic per server
+
+👉 Same file → different websites
+
+📁 templates/nginx.conf.j2
+server {
+    listen 80;
+    server_name _;
+
+    root /var/www/html;
+    index index.html;
+}
+📖 Explanation
+Configures nginx server
+Sets root directory
+📁 files/site/about.html
+
+Static HTML page.
+
+👉 Copied directly to server.
+
+📁 files/site/style.css
+
+CSS styling file.
+
+👉 Improves UI.
+
+🚀 6. Main Playbook
+- name: Deploy custom website to webservers
+  hosts: webservers
+  become: yes
+
+  roles:
+    - nginx_site
+📖 Explanation
+Runs on webservers
+Uses nginx_site role
+become: yes → run as root
+
+👉 Entry point of automation
+
+🧪 7. Commands Used
+Test connection
+ansible webservers -m ping
+Run playbook
+ansible-playbook site.yml
+🌐 8. Output
+http://localhost:9001 → node1 (DEV)
+http://localhost:9002 → node2 (PROD)
+🔁 9. Idempotency
+Running playbook multiple times:
+does NOT break system
+only updates changes
+
+👉 Core Ansible principle
+
+⚠️ 10. Special Case (Docker)
+service: module failed
+Used:
+shell: service nginx start
+
+👉 Because Docker containers don’t use full init system
+
+🎯 Final Learning Summary
+
+You learned:
+
+✔ Infrastructure simulation using Docker
+✔ Server automation using Ansible
+✔ Inventory and grouping
+✔ Variables (group + host)
+✔ Jinja templating
+✔ Roles structure
+✔ Playbooks execution
+✔ Handlers and notifications
+✔ Idempotent automation
+✔ Real website deployment
+
+🧠 One-line summary
+
+👉 “Automated deployment of a dynamic multi-node web application using Ansible roles and Docker-based infrastructure.”
